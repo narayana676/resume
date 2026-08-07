@@ -567,8 +567,21 @@ Rules:
 # MAIN PIPELINE
 # ============================================================
 
-def placement_pipeline(request: ResumeRequest):
-    
+def placement_pipeline(request):
+
+    # Convert LangServe dictionary input
+    # into the Pydantic ResumeRequest model
+    request = ResumeRequest.model_validate(request)
+
+    if not request.resume_text.strip():
+        raise ValueError(
+            "resume_text cannot be empty."
+        )
+
+    if not request.target_role.strip():
+        raise ValueError(
+            "target_role cannot be empty."
+        )    
     if not request.resume_text.strip():
 
         raise ValueError(
