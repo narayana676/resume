@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+langserve[server]
+langchain
+langchain-core
+langchain-community
+langchain-google-genai
+pypdf
+tavily-python
+requests
+pydantic
+python-multipart
