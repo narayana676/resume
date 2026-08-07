@@ -567,8 +567,8 @@ Rules:
 # MAIN PIPELINE
 # ============================================================
 
-def placement_pipeline(request):
-
+def placement_pipeline(request: ResumeRequest):
+    
     if not request.resume_text.strip():
 
         raise ValueError(
@@ -656,6 +656,8 @@ app = FastAPI(
 
 placement_chain = RunnableLambda(
     placement_pipeline
+).with_types(
+    input_type=ResumeRequest
 )
 
 
