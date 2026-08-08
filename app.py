@@ -3,6 +3,11 @@ import os
 import re
 import json
 from typing import Optional
+from fastapi import UploadFile, File, Form
+from fastapi.responses import HTMLResponse
+from pypdf import PdfReader
+from io import BytesIO
+import html
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -681,18 +686,150 @@ add_routes(
 )
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def root():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AI Resume Placement Assistant</title>
 
-    return {
-        "message":
-            "Placement Ready AI Agent API",
-        "status":
-            "running",
-        "endpoint":
-            "/placement"
-    }
+        <style>
+            body {
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: #f4f7fb;
+            }
 
+            .container {
+                max-width: 750px;
+                margin: 60px auto;
+                padding: 20px;
+            }
+
+            .card {
+                background: white;
+                padding: 40px;
+                border-radius: 18px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            }
+
+            h1 {
+                text-align: center;
+                color: #2563eb;
+            }
+
+            .subtitle {
+                text-align: center;
+                color: #666;
+                margin-bottom: 30px;
+            }
+
+            label {
+                display: block;
+                font-weight: bold;
+                margin-top: 20px;
+                margin-bottom: 8px;
+            }
+
+            input {
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                font-size: 15px;
+            }
+
+            button {
+                width: 100%;
+                margin-top: 30px;
+                padding: 15px;
+                background: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 17px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+
+            button:hover {
+                background: #1d4ed8;
+            }
+
+            .info {
+                margin-top: 20px;
+                padding: 12px;
+                background: #eff6ff;
+                border-radius: 8px;
+                text-align: center;
+                color: #1e40af;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="container">
+
+            <div class="card">
+
+                <h1>AI Resume Placement Assistant</h1>
+
+                <div class="subtitle">
+                    Upload your resume and get AI-powered placement analysis
+                </div>
+
+                <form
+                    action="/analyze-resume"
+                    method="post"
+                    enctype="multipart/form-data"
+                >
+
+                    <label>Upload Resume PDF</label>
+
+                    <input
+                        type="file"
+                        name="resume_file"
+                        accept=".pdf"
+                        required
+                    >
+
+                    <label>Target Job Role</label>
+
+                    <input
+                        type="text"
+                        name="target_role"
+                        placeholder="Example: Python Developer"
+                        value="Python Developer"
+                        required
+                    >
+
+                    <label>GitHub Username (Optional)</label>
+
+                    <input
+                        type="text"
+                        name="github_username"
+                        placeholder="Example: yourusername"
+                    >
+
+                    <button type="submit">
+                        Analyze Resume
+                    </button>
+
+                </form>
+
+                <div class="info">
+                    PDF resumes are supported
+                </div>
+
+            </div>
+
+        </div>
+
+    </body>
+    </html>
+    """
 
 @app.get("/health")
 def health():
@@ -701,3 +838,40 @@ def health():
         "status": "healthy",
         "model": MODEL_NAME
     }
+except Exception as e:
+    return HTMLResponse(
+        f"""
+        <html>
+        <body style="font-family:Arial;padding:40px;">
+
+        <h2 style="color:red;">
+        Error while analyzing resume
+        </h2>
+
+        <pre>{html.escape(str(e))}</pre>
+
+        <br>
+
+        <a href="/">
+        ← Try again
+        </a>
+
+        </body>
+        </html>
+        """,
+        status_code=500
+    )
+
+
+# ============================================================
+# RUN APP
+# ============================================================
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000))
+    )
