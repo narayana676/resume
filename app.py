@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.runnables import RunnableLambda
 from langserve import add_routes
@@ -44,6 +45,7 @@ llm = ChatGoogleGenerativeAI(
 # ============================================================
 
 class ResumeRequest(BaseModel):
+
     resume_text: str = Field(
         ...,
         description="Resume text"
@@ -570,14 +572,17 @@ def placement_pipeline(request):
 
     # Convert LangServe dictionary input
     # into the Pydantic ResumeRequest model
+
     request = ResumeRequest.model_validate(request)
 
     if not request.resume_text.strip():
+
         raise ValueError(
             "resume_text cannot be empty."
         )
 
     if not request.target_role.strip():
+
         raise ValueError(
             "target_role cannot be empty."
         )
@@ -655,6 +660,10 @@ app = FastAPI(
 )
 
 
+# ============================================================
+# LANGSERVE CHAIN
+# ============================================================
+
 placement_chain = RunnableLambda(
     placement_pipeline
 ).with_types(
@@ -662,12 +671,35 @@ placement_chain = RunnableLambda(
 )
 
 
+# ============================================================
+# LANGSERVE ROUTE
+# ============================================================
+
 add_routes(
     app,
     placement_chain,
     path="/placement"
 )
 
+
+# ============================================================
+# BROWSER-FRIENDLY PLACEMENT ROUTE
+# ============================================================
+
+@app.get("/placement")
+def placement_info():
+
+    return {
+        "message": "Placement API is running",
+        "playground": "/placement/playground/",
+        "invoke_endpoint": "/placement/invoke",
+        "docs": "/docs"
+    }
+
+
+# ============================================================
+# ROOT ROUTE
+# ============================================================
 
 @app.get("/")
 def root():
@@ -682,6 +714,10 @@ def root():
     }
 
 
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
 @app.get("/health")
 def health():
 
@@ -690,17 +726,24 @@ def health():
         "model": MODEL_NAME
     }
 
+
 # ============================================================
 # LOCAL / DIRECT RUN
 # ============================================================
 
 if __name__ == "__main__":
+
     import uvicorn
 
-    port = int(os.getenv("PORT", "8000"))
+    port = int(
+        os.getenv(
+            "PORT",
+            "8000"
+        )
+    )
 
     uvicorn.run(
-        "app:app",
+        app,
         host="0.0.0.0",
         port=port,
         reload=False
