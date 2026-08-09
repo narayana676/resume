@@ -1,6 +1,5 @@
 fastapi
 uvicorn[standard]
-langserve[server]
 langchain
 langchain-core
 langchain-community
