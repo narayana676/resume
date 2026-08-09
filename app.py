@@ -4,6 +4,7 @@ import json
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -678,7 +679,7 @@ placement_chain = RunnableLambda(
 add_routes(
     app,
     placement_chain,
-    path="/placement"
+    path="/api/placement"
 )
 
 
@@ -686,15 +687,329 @@ add_routes(
 # BROWSER-FRIENDLY PLACEMENT ROUTE
 # ============================================================
 
-@app.get("/placement")
-def placement_info():
+@app.get("/placement", response_class=HTMLResponse)
+def placement_page():
 
-    return {
-        "message": "Placement API is running",
-        "playground": "/placement/playground/",
-        "invoke_endpoint": "/placement/invoke",
-        "docs": "/docs"
+    return """
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Placement Ready AI</title>
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            color: #2563eb;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-top: 18px;
+            margin-bottom: 7px;
+        }
+
+        textarea,
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        textarea {
+            min-height: 220px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 25px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .success {
+            color: #15803d;
+        }
+
+        .error {
+            color: #dc2626;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>Placement Ready AI</h1>
+
+        <div class="subtitle">
+            AI-powered Resume Analysis and Placement Assistant
+        </div>
+
+        <label for="resume">
+            Resume Text
+        </label>
+
+        <textarea
+            id="resume"
+            placeholder="Paste your resume text here..."
+        ></textarea>
+
+
+        <label for="role">
+            Target Job Role
+        </label>
+
+        <input
+            id="role"
+            type="text"
+            placeholder="Example: Python Developer"
+        >
+
+
+        <label for="github">
+            GitHub Username (Optional)
+        </label>
+
+        <input
+            id="github"
+            type="text"
+            placeholder="Example: octocat"
+        >
+
+
+        <button
+            id="analyzeButton"
+            onclick="analyzeResume()"
+        >
+            Analyze Resume
+        </button>
+
+
+        <div id="status"></div>
+
+        <div id="result"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+async function analyzeResume() {
+
+    const resume =
+        document.getElementById("resume").value.trim();
+
+    const role =
+        document.getElementById("role").value.trim();
+
+    const github =
+        document.getElementById("github").value.trim();
+
+    const button =
+        document.getElementById("analyzeButton");
+
+    const status =
+        document.getElementById("status");
+
+    const result =
+        document.getElementById("result");
+
+
+    if (!resume) {
+
+        status.className = "error";
+
+        status.innerText =
+            "Please enter your resume.";
+
+        return;
     }
+
+
+    if (!role) {
+
+        status.className = "error";
+
+        status.innerText =
+            "Please enter the target job role.";
+
+        return;
+    }
+
+
+    button.disabled = true;
+
+    status.className = "";
+
+    status.innerText =
+        "Analyzing your resume... Please wait.";
+
+    result.innerText = "";
+
+
+    try {
+
+        const requestBody = {
+
+            input: {
+
+                resume_text: resume,
+
+                target_role: role,
+
+                github_username:
+                    github || null
+            }
+
+        };
+
+
+        const response = await fetch(
+            "/api/placement/invoke",
+            {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify(requestBody)
+            }
+        );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                JSON.stringify(data)
+            );
+        }
+
+
+        status.className =
+            "success";
+
+        status.innerText =
+            "Analysis completed successfully!";
+
+
+        const output =
+            data.output || data;
+
+
+        result.innerText =
+            JSON.stringify(
+                output,
+                null,
+                2
+            );
+
+
+    } catch (error) {
+
+        status.className =
+            "error";
+
+        status.innerText =
+            "Error while analyzing resume.";
+
+        result.innerText =
+            error.message;
+
+    }
+
+
+    button.disabled = false;
+
+}
+
+</script>
+
+</body>
+</html>
+"""
 
 
 # ============================================================
